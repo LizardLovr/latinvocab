@@ -1482,8 +1482,7 @@
               { english: 'Away from, by', latin: 'Abs (+abl)', chapter: 27, pos: 'preposition', deponent: false },
               { english: 'In place of, for', latin: 'Prō (+abl)', chapter: 27, pos: 'preposition', deponent: false },
               { english: 'Or', latin: '-ve', chapter: 27, pos: 'enclitic', deponent: false }
-              { english: 'Therefore, and so', latin: 'Itaque', chapter: 6, pos: 'conjunction', deponent: false }
-              { english: 'However', latin: 'Autem', chapter: 6, pos: 'conjunction', deponent: false }
+              
 
         ];
 
@@ -2550,72 +2549,85 @@
     </div>
 
     <script>
-        const searchBtn = document.getElementById('searchBtn');
-        const searchModal = document.getElementById('searchModal');
-        const closeSearchBtn = document.getElementById('closeSearchBtn');
-        const searchInput = document.getElementById('searchInput');
-        const searchResultsDiv = document.getElementById('searchResults');
+    // Utility function to remove diacritics from a string
+    function removeDiacritics(str) {
+        // Normalize to NFD Unicode and remove combining diacritical marks
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
 
-        searchBtn.addEventListener('click', () => {
-            searchModal.classList.remove('hidden');
-            searchInput.value = '';
-            searchResultsDiv.innerHTML = '';
-            searchInput.focus();
-        });
+    const searchBtn = document.getElementById('searchBtn');
+    const searchModal = document.getElementById('searchModal');
+    const closeSearchBtn = document.getElementById('closeSearchBtn');
+    const searchInput = document.getElementById('searchInput');
+    const searchResultsDiv = document.getElementById('searchResults');
 
-        closeSearchBtn.addEventListener('click', () => {
+    searchBtn.addEventListener('click', () => {
+        searchModal.classList.remove('hidden');
+        searchInput.value = '';
+        searchResultsDiv.innerHTML = '';
+        searchInput.focus();
+    });
+
+    closeSearchBtn.addEventListener('click', () => {
+        searchModal.classList.add('hidden');
+    });
+
+    searchModal.addEventListener('click', (e) => {
+        if (e.target === searchModal) {
             searchModal.classList.add('hidden');
-        });
-
-        searchModal.addEventListener('click', (e) => {
-            if (e.target === searchModal) {
-                searchModal.classList.add('hidden');
-            }
-        });
-
-        let searchTimeout;
-        searchInput.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                performSearch(searchInput.value.trim());
-            }, 300);
-        });
-
-        function performSearch(query) {
-            if (!query) {
-                searchResultsDiv.innerHTML = '<p class="text-gray-500 text-center">Enter a word to search.</p>';
-                return;
-            }
-            const qLower = query.toLowerCase();
-            const results = vocabulary.filter(word =>
-                word.english.toLowerCase().includes(qLower) || word.latin.toLowerCase().includes(qLower));
-
-            if (results.length === 0) {
-                searchResultsDiv.innerHTML = `<p class="text-red-500 text-center">No results found for "<strong>${query}</strong>"</p>`;
-                return;
-            }
-            searchResultsDiv.innerHTML = '';
-            results.forEach(word => {
-                const div = document.createElement('div');
-                div.tabIndex = 0;
-                div.className = "cursor-pointer p-2 border-b last:border-b-0 hover:bg-yellow-100 rounded";
-                div.innerHTML = `
-                    <div class="font-semibold">${word.english} <span class="italic text-gray-600">|</span> ${word.latin}</div>
-                    <div class="text-xs text-gray-500">Ch. ${word.chapter} • ${word.pos}${word.deponent ? ' (Deponent)' : ''}${word.declension ? ' • ' + word.declension : ''}${word.conjugation ? ' • ' + word.conjugation : ''}</div>
-                `;
-                div.addEventListener('click', () => {
-                    searchModal.classList.add('hidden');
-                    jumpToWord(word);
-                });
-                div.addEventListener('keydown', e => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        div.click();
-                    }
-                });
-                searchResultsDiv.appendChild(div);
-            });
         }
+    });
+
+    let searchTimeout;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            performSearch(searchInput.value.trim());
+        }, 300);
+    });
+
+    function performSearch(query) {
+        if (!query) {
+            searchResultsDiv.innerHTML = '<p class="text-gray-500 text-center">Enter a word to search.</p>';
+            return;
+        }
+
+        // Remove diacritics and lowercase the query for comparison
+        const normalizedQuery = removeDiacritics(query).toLowerCase();
+
+        const results = vocabulary.filter(word => {
+            const normalizedEnglish = removeDiacritics(word.english).toLowerCase();
+            const normalizedLatin = removeDiacritics(word.latin).toLowerCase();
+            return normalizedEnglish.includes(normalizedQuery) || normalizedLatin.includes(normalizedQuery);
+        });
+
+        if (results.length === 0) {
+            searchResultsDiv.innerHTML = `<p class="text-red-500 text-center">No results found for "<strong>${query}</strong>"</p>`;
+            return;
+        }
+        searchResultsDiv.innerHTML = '';
+        results.forEach(word => {
+            const div = document.createElement('div');
+            div.tabIndex = 0;
+            div.className = "cursor-pointer p-2 border-b last:border-b-0 hover:bg-yellow-100 rounded";
+            div.innerHTML = `
+                <div class="font-semibold">${word.english} <span class="italic text-gray-600">|</span> ${word.latin}</div>
+                <div class="text-xs text-gray-500">Ch. ${word.chapter} • ${word.pos}${word.deponent ? ' (Deponent)' : ''}${word.declension ? ' • ' + word.declension : ''}${word.conjugation ? ' • ' + word.conjugation : ''}</div>
+            `;
+            div.addEventListener('click', () => {
+                searchModal.classList.add('hidden');
+                jumpToWord(word);
+            });
+            div.addEventListener('keydown', e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    div.click();
+                }
+            });
+            searchResultsDiv.appendChild(div);
+        });
+    }
+
 
         function jumpToWord(word) {
             let indexInFiltered = filteredVocabulary.findIndex(w => w === word);
